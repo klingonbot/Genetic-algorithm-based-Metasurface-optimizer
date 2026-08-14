@@ -1,0 +1,107 @@
+import numpy as np
+
+from .fitness import evaluate_individual
+
+
+def tournament_selection(population, fitness_values, tournament_size=3):
+    """Select one parent via tournament selection (higher fitness wins)."""
+    pop_size = population.shape[0]
+    idx = np.random.choice(pop_size, size=tournament_size, replace=False)
+    winner = idx[np.argmax(fitness_values[idx])]
+    return population[winner].copy()
+
+
+def uniform_crossover(parent1, parent2, crossover_rate=0.9):
+    """Uniform crossover: each gene independently swaps with probability 0.5."""
+    if np.random.rand() > crossover_rate:
+        return parent1.copy(), parent2.copy()
+
+    mask = np.random.rand(parent1.size) < 0.5
+    child1 = parent1.copy()
+    child2 = parent2.copy()
+    child1[mask] = parent2[mask]
+    child2[mask] = parent1[mask]
+    return child1, child2
+
+
+def mutation(individual, B, mutation_rate=0.01):
+    """Randomly reassign genes to a new phase state with probability mutation_rate."""
+    n_states = 2 ** B
+    mutated = individual.copy()
+    mask = np.random.rand(mutated.size) < mutation_rate
+    mutated[mask] = np.random.randint(0, n_states, size=np.sum(mask))
+    return mutated
+
+
+def adaptive_mutation_rate(generation, max_generations,
+                            start_rate=0.05, end_rate=0.001):
+    """Linearly anneal the mutation rate from start_rate down to end_rate."""
+    return (
+        start_rate -
+        (start_rate - end_rate)
+        * generation
+        / max_generations
+    )
+
+
+def create_new_population(population, fitness_values, B,
+                           elitism=True, crossover_rate=0.9,
+                           mutation_rate=0.01, tournament_size=3,
+                           pec_peak=None, S_matrix=None,
+                           theta_deg=None, phi_deg=None,
+                           elite_protection_threshold=0.95):
+    """
+    Build the next generation via elitism, tournament selection, uniform
+    crossover, and fitness-gated mutation.
+
+    Offspring whose fitness (immediately after crossover) already reaches
+    `elite_protection_threshold` fraction of the current elite's fitness are
+    carried forward unmutated ("elite protection"); weaker offspring are
+    mutated normally.
+    """
+    pop_size = population.shape[0]
+    new_population = []
+
+    # ── Elite ──────────────────────────────────────────
+    elite_idx = np.argmax(fitness_values)
+    elite_fitness = fitness_values[elite_idx]
+
+    if elitism:
+        new_population.append(population[elite_idx].copy())
+
+    # ── Fitness threshold for mutation protection ──────
+    # Children with fitness >= threshold fraction of elite
+    # are added directly without mutation
+    protection_threshold = elite_protection_threshold * elite_fitness
+
+    while len(new_population) < pop_size:
+        parent1 = tournament_selection(population, fitness_values, tournament_size)
+        parent2 = tournament_selection(population, fitness_values, tournament_size)
+
+        child1, child2 = uniform_crossover(parent1, parent2, crossover_rate)
+
+        # ── Evaluate child1 after crossover ────────────
+        child1_fitness, _, _ = evaluate_individual(
+            child1, S_matrix, theta_deg, phi_deg, B, pec_peak
+        )
+
+        if child1_fitness >= protection_threshold:
+            # Good child — protect from mutation
+            new_population.append(child1)
+        else:
+            # Weak child — mutate normally
+            new_population.append(mutation(child1, B, mutation_rate))
+
+        if len(new_population) < pop_size:
+
+            # ── Evaluate child2 after crossover ────────
+            child2_fitness, _, _ = evaluate_individual(
+                child2, S_matrix, theta_deg, phi_deg, B, pec_peak
+            )
+
+            if child2_fitness >= protection_threshold:
+                new_population.append(child2)
+            else:
+                new_population.append(mutation(child2, B, mutation_rate))
+
+    return np.array(new_population[:pop_size], dtype=int)
