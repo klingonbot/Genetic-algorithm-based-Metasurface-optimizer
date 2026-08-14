@@ -24,46 +24,4 @@ angles.
    together into the full generational loop and returns the best pattern
    found.
 
-## Install
 
-```bash
-pip install -r requirements.txt
-```
-
-## Run the example
-
-```bash
-python -m rcs_optimization.examples.run_optimization
-```
-
-This runs a 30x30, 1-bit (2-state) array over 200 generations and prints
-the optimized coding matrix, RCS reduction in dB, and a comparison against
-a plain checkerboard pattern.
-
-## Use in your own code
-
-```python
-from rcs_optimization import optimize_rcs
-
-result = optimize_rcs(N=30, M=30, B=1, pop_size=200, max_generations=200)
-
-print(result["best_fitness_dB"])
-print(result["best_individual"].reshape(result["N"], result["M"]))
-```
-
-## Repo layout
-
-```
-rcs_optimization/
-├── __init__.py
-├── steering.py
-├── population.py
-├── fitness.py
-├── genetic_operators.py
-├── optimizer.py
-└── examples/
-    ├── __init__.py
-    └── run_optimization.py
-requirements.txt
-README.md
-```
