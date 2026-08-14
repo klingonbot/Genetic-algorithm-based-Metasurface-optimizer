@@ -64,5 +64,6 @@ rcs_optimization/
 └── examples/
     ├── __init__.py
     └── run_optimization.py
+requirements.txt
 README.md
 ```
