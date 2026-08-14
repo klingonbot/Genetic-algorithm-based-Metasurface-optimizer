@@ -1,4 +1,4 @@
-# RCS Optimization via Coding Metasurface GA
+# RCS Optimization via Coding Metasurface Genetic Algorithm
 
 A genetic algorithm that optimizes the per-element phase states of an
 `N x M` coding metasurface to reduce monostatic radar cross-section (RCS),
